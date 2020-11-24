@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <title>House Plant Dashboard</title>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+    </head>
+    <style>
+        html {
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            text-align: center;
+            width: 100%;
+            height: 100%;
+        }
+        #inputBoxes{
+            width: 35em;
+            padding-bottom: 1.5em;
+        }
+
+        #finishTimeDisplayBox{
+            width: 12em;
+            padding-bottom: 1.5em;
+        }
+
+        .box {
+            height: 200px;
+            width: 350px;
+
+            background-color: #9DBDCC;
+            border-radius: 5px;
+            box-shadow: inset 5px 5px rgba(0, 0, 0, 0.2);
+            margin-top: 15px;
+            margin-left: auto;
+            margin-right: auto;
+            display: inline-block;
+            font-size: 2.3em;
+        }
+
+        .gauges {
+            padding: 10px;
+            margin-top: 10px;
+            margin-left: auto;
+            margin-right: auto;
+            display: inline-block;
+        }
+    </style>
+
+    <body>
+        <h1>Finish Time Cal</h1>
+
+        <hr>
+
+        <center>
+
+            <div class="input-group" id="inputBoxes">
+                <select class="custom-select" id="inputGroupSelect04" aria-label="Example select with button addon">
+                  <option value="9.5" selected>9.5 Hour Day (4 Day Week)</option>
+                  <option value="8.5">8.5 Hour Day (9 Day Fortnight)</option>
+                  <option value="7.5">7.6 Hour Day (5 Day Week)</option>
+                </select>
+            </div>
+
+            <div class="input-group mb-3" id="inputBoxes">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" id="inputGroup-sizing-default">Start Time:</span>
+                </div>
+                <input type="text" id="startTimeBox" value="8.5" class="form-control" aria-label="start-time-input" aria-describedby="inputGroup-sizing-default">
+
+                <div class="input-group-prepend">
+                    <span class="input-group-text" id="inputGroup-sizing-default">Length of Lunch Break:</span>
+                  </div>
+                  <input type="text" id="lunchLenTimeBox" value="0.5" class="form-control" aria-label="lunch-time-input" aria-describedby="inputGroup-sizing-default">
+                  <div class="input-group-append">
+                    <span class="input-group-text">Hrs</span>
+                  </div>
+            </div>
+
+            <div class="input-group mb-3" id="finishTimeDisplayBox">
+                <div class="input-group-prepend">
+                    <span class="input-group-text" id="inputGroup-sizing-default">Finish Time:</span>
+                </div>
+                <input class="form-control" id="finishTimeBox" type="text" value="0" readonly>
+            </div>
+
+        </center>
+
+        <hr>
+        <button type="button" class="btn btn-success" onclick="myFunction()">Calculate</button>
+    </body>
+
+    <script>
+        // ### VARS!!!! ###
+
+        // ### Functions ###
+        // ### Timed Call to update functions
+        window.setInterval(deleteNReload, windowReloadTime);
+        // reload every min
+
+        // Updates the required plant data.
+        function updateAndBuildPlants(id, deviceInput, useableName, deviceToRemove) {
+            var requestURLmoisture = "https://api.particle.io/v1/devices/" + deviceInput + "/" + moistureVar2get + "/?access_token=" + accessToken;
+            // Set the moisture GET URL
+
+            // Set the light GET URL
+            var requestURLlight = "https://api.particle.io/v1/devices/" + deviceInput + "/" + lightVar2get + "/?access_token=" + accessToken;
+
+            // Update(or Build) each box in async, wait for the response of each fetch request however.
+            // meaning that each box will be build in parallel however each box will wait for their individual fetch requests
+            const requestUpdate = async () => {
+                const moistureResponse = await fetch(requestURLmoisture);
+                const lightResponse = await fetch(requestURLlight);
+                const jsonMoistureData = await moistureResponse.json(); // Response of the moisture fetch returned in json
+                const jsonLightData = await lightResponse.json();
+                // Response of the light fetch returned in json
+
+                // Set the results
+                resOfmoisture = jsonMoistureData.result;
+                resOfLight = jsonLightData.result;
+
+                // Display the data according to the amount of water.
+                if (parseInt(resOfmoisture, 10) < idealWaterLevel) {
+                    $(document.body).append('<div class="box" id ="' + id + '" style="background-color: red; height: 270px; color: white;"><h1>' + useableName + '</h1><p id="lightText">Light Level: <span class="lightText" id="lightAmounts">' + resOfLight + '</span><br><p id="moistureText">Moisture Level: <span class="moistureText" id="moistureAmounts">' + resOfmoisture + '</span><br><p style="text-decoration: underline; ">Water Yo Plant</p><br><button id="updateButton" class="btn btn-danger" onclick="deleteRow(' + deviceToRemove + ')">Remove</button></div>');
+                } else if (parseInt(resOfmoisture, 10) < highWaterLevel) {
+                    $(document.body).append('<div class="box" id ="' + id + '" style="background-color: green;"><h1>' + useableName + '</h1><p id="lightText">Light Level: <span class="lightText" id="lightAmounts">' + resOfLight + '</span><br><p id="moistureText">Moisture Level: <span class="moistureText" id="moistureAmounts">' + resOfmoisture + '</span><br><br><button id="updateButton" class="btn btn-danger" onclick="deleteRow(' + deviceToRemove + ')">Remove</button></div>');
+                } else {
+                    $(document.body).append('<div class="box" id ="' + id + '"><h1>' + useableName + '</h1><p id="lightText">Light Level: <span class="lightText" id="lightAmounts">' + resOfLight + '</span><br><p id="moistureText">Moisture Level: <span class="moistureText" id="moistureAmounts">' + resOfmoisture + '</span><br><br><button id="updateButton" class="btn btn-danger" onclick="deleteRow(' + deviceToRemove + ')">Remove</button></div>');
+                }
+
+                // Set the loading text back to null.
+                document.getElementById("statusText").innerHTML = '...';
+
+                // The load of the elements has happened at least once now.
+                firstLoad = false;
+            }
+
+            // Call the update plant data method.
+            requestUpdate();
+        }
+
+        // ---- Database functions ----
+
+
+        // ---- Build the plant element boxes ----
+
+        // Build the plant items
+        function loadPlants() {
+            getTableSizeProc();
+            // Get the table numPlants in proc.
+
+            // Equal to the row count built from the above function.
+            var sizeString = rowCount;
+
+            // display the amount of devices while loading plants
+            document.getElementById("statusText").innerHTML = 'Loading... ' + sizeString + ' Plants';
+
+            // turn the numPlants into a base 10 int
+            numPlants = parseInt(sizeString, 10);
+
+            // start at 0
+            var plantNum = 0;
+
+            // If there are no plants in the database then don't try loading any
+            if (numPlants > 0) { // while there are still items in the database keep building plants
+                while (plantNum < numPlants) {
+                    getDeviceID(plantNum);
+                    // get the current device name from the database in row (plantNum)
+
+                    // get the current friendly name from the database in row (plantNum)
+                    getFriendlyName(plantNum);
+
+                    // figuring out that I had to add the ' ' inside the " " so that jquery didn't remove the '' when appending took way to long
+                    let newTestVar = "'" + deviceID + "'";
+
+                    // # the magic happens here
+                    // pass into the main funciton that gets the values from particle and builds the boxes
+                    updateAndBuildPlants(plantNum, deviceID, friendlyName, newTestVar);
+
+                    // Move on to the next plant in the database
+                    plantNum++;
+                }
+            } else {
+                document.getElementById("statusText").innerHTML = 'No Plants Found In Database!'; // display text that no plants were found in the database
+            }
+        }
+
+        // --- update and main function ---
+        function myFunction() {
+            var startTime = parseFloat(document.getElementById("startTimeBox").value);
+
+            // Round to the closest .25 
+            startTime = RoundTo(startTime, 0.25);
+
+            // Make sure the start time is within the required range. (<= required start && time >= earlyest start time)
+            startTime = checkStartTime(startTime, 9, 5)
+            
+            // Redisplay the start if an adjustement as needed.
+            document.getElementById("startTimeBox").value = startTime;
+
+            var lunchTime = parseFloat(document.getElementById("lunchLenTimeBox").value);
+            
+            // Make sure lunch break is greater then 0.5 if not set to 0.5
+            lunchTime >= 0.5 ? lunchTime : lunchTime = 0.5;
+
+            // Round to closest .25
+            //lunchTime = RoundToPt25(lunchTime);
+
+            var workDayLength = parseFloat(document.getElementById("inputGroupSelect04").value);
+
+            var finishTime = startTime + workDayLength + lunchTime;
+
+            document.getElementById("finishTimeBox").value = finishTime;
+            changeTo12HRTime(finishTime);
+        }
+
+        function checkStartTime(value, requiredStartTime, earlyStartTime) {
+            return (value <= requiredStartTime && value >= earlyStartTime ? value : requiredStartTime) 
+        }
+
+        function RoundTo(number, roundto) {
+            return roundto * Math.round(number/roundto);
+        }
+
+        function changeTo12HRTime(input) {
+            
+            var outputString = "";
+            var hour = Math.floor(input);
+            
+            var min = input % 1;
+            alert(min);
+            var minString = "";
+            
+            // Check the quarter hour
+            if (min == 0)
+            {
+                minString = "";
+            }
+            else if (min == 0.25)
+            {
+                minString = 15;
+            }
+            else if (min == 0.5)
+            {
+                minString = 30;
+            }
+            else (min == 0.75)
+            {
+                minString = 45;
+            }
+
+            if (hour > 12) {
+               var hour = hour - 12;
+               alert(hour);
+               outputString = hour + ":" + minString + " PM";  
+            }
+            else
+            {
+                var hour = input;
+                outputString = hour + ":" + minString + " AM";
+            }
+
+            alert(outputString);
+        }    
+
+        // When document ready do the following.
+        $(document).ready(function () {
+            loadPlants();
+            
+        });
+
+    </script>
+</html>
